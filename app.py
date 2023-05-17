@@ -54,11 +54,47 @@ class Instructor(db.Model):
 
 
 # Schemas
+class StudentSchema(ma.Schema):
+    class Meta:
+        fields=("id","first_name","last_name","year","gpa",)
+
+students_schema=StudentSchema(many=True)
+
+class StudentNameSchema(ma.Schema):
+    class Meta:
+        fields =("first_name","last_name")
+students_name_schema=StudentNameSchema(many=True)
 
 
 # Resources
+class StudentListResource(Resource):
+    def get(self):
+        order= request.args.get('order')
+        query=Student.query
+        if order=="gpa":
+            query=query.order_by(Student.gpa.desc())
+        else:
+            query=query.order_by(order)
+        
+        all_students=query.all()
+        return students_schema.dump(all_students)
+
+class  FullCourseDetailResource(Resource):
+    def get(self,course_id):
+        course=Course.query.get_or_404(course_id)
+        instructor=Instructor.query.get_or_404(course.instructor_id)
+        custom_response={
+            "course_name":course.name,
+            "instructor_name":f'{instructor.first_name} {instructor.last_name}',
+            "number of students":len(course.students),
+            "students":students_name_schema.dump(course.students)
+        }
+        return custom_response, 200
+
 
 
 # Routes
+api.add_resource(StudentListResource, '/api/students')
+api.add_resource(FullCourseDetailResource, '/api/course_details/<int:course_id>')
 
 
